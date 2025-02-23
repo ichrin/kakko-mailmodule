@@ -1,10 +1,11 @@
+
 const imaplib = require('imap');
 const { inspect } = require('util');
 
-exports.handler = async () => {
+module.exports = async (req, res) => {
   const imap = new imaplib({
-    user: 'mail', // 替换为您的 mail.ru 邮箱
-    password: 'pass',  // 替换为您的 mail.ru 密码
+    user: process.env.MAILRU_USER, // 从环境变量读取邮箱
+    password: process.env.MAILRU_PASSWORD, // 从环境变量读取密码
     host: 'imap.mail.ru',
     port: 993,
     tls: true,
@@ -58,14 +59,8 @@ exports.handler = async () => {
     const emails = await fetchEmails();
     imap.end();
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ emails }),
-    };
+    res.status(200).json({ emails });
   } catch (error) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ message: '邮件接收失败', error: error.message }),
-    };
+    res.status(500).json({ message: '邮件接收失败', error: error.message });
   }
-};
+}
