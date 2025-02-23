@@ -14,6 +14,7 @@
       justify-content: center;
       align-items: center;
       height: 100vh;
+      flex-direction: column;
     }
     .container {
       background-color: #fff;
@@ -22,6 +23,7 @@
       box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
       width: 100%;
       max-width: 400px;
+      margin-bottom: 20px;
     }
     h1 {
       text-align: center;
@@ -68,30 +70,131 @@
       font-size: 14px;
       color: #333;
     }
+    .email-list {
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 400px;
+    }
+    .email-item {
+      border-bottom: 1px solid #eee;
+      padding: 10px 0;
+    }
+    .email-item:last-child {
+      border-bottom: none;
+    }
+    .email-subject {
+      font-weight: bold;
+      color: #333;
+    }
+    .email-sender {
+      color: #777;
+      font-size: 14px;
+    }
+    .email-content {
+      color: #555;
+      font-size: 14px;
+      margin-top: 5px;
+    }
   </style>
 </head>
 <body>
-    <div class="container">
-      <h1>发送邮件</h1>
-      <form action="https://your-leancloud-function-url/send" method="POST">
-        <label for="name">姓名</label>
-        <input type="text" id="name" name="name" placeholder="请输入您的姓名" required>
-  
-        <label for="email">邮箱</label>
-        <input type="email" id="email" name="email" placeholder="请输入您的邮箱" required>
-  
-        <!-- 新增：收件人地址输入字段 -->
-        <label for="recipient">收件人邮箱</label>
-        <input type="email" id="recipient" name="recipient" placeholder="请输入收件人邮箱" required>
-  
-        <label for="message">内容</label>
-        <textarea id="message" name="message" placeholder="请输入邮件内容" required></textarea>
-  
-        <button type="submit">发送</button>
-      </form>
-      <div class="message">
-        提示：请填写表单并点击“发送”按钮，邮件将通过 Leancloud 无服务器函数发送。
-      </div>
-    </div>
-  </body>
+  <div class="container">
+    <h1>发送邮件</h1>
+    <form id="sendMailForm">
+      <label for="name">姓名</label>
+      <input type="text" id="name" name="name" placeholder="请输入您的姓名" required>
+
+      <label for="email">邮箱</label>
+      <input type="email" id="email" name="email" placeholder="请输入您的邮箱" required>
+
+      <label for="recipient">收件人邮箱</label>
+      <input type="email" id="recipient" name="recipient" placeholder="请输入收件人邮箱" required>
+
+      <label for="message">内容</label>
+      <textarea id="message" name="message" placeholder="请输入邮件内容" required></textarea>
+
+      <button type="submit">发送</button>
+    </form>
+    <div class="message" id="sendMailMessage"></div>
+  </div>
+
+  <div class="email-list" id="emailList">
+    <h1>未读邮件</h1>
+    <button onclick="fetchEmails()">查看邮件</button>
+    <div id="emailsContainer"></div>
+  </div>
+
+  <script>
+    // 处理表单提交
+    document.getElementById('sendMailForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const formData = new FormData(e.target);
+      const data = {
+        name: formData.get('name'),
+        email: formData.get('email'),
+        recipient: formData.get('recipient'),
+        message: formData.get('message'),
+      };
+
+      try {
+        const response = await fetch('/api/send', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        });
+
+        const result = await response.json();
+        document.getElementById('sendMailMessage').textContent = result.message;
+      } catch (error) {
+        document.getElementById('sendMailMessage').textContent = '邮件发送失败';
+      }
+    });
+
+    // 获取未读邮件
+    async function fetchEmails() {
+      try {
+        const response = await fetch('/api/check');
+        const result = await response.json();
+
+        const emailsContainer = document.getElementById('emailsContainer');
+        emailsContainer.innerHTML = '';
+
+        if (result.emails && result.emails.length > 0) {
+          result.emails.forEach((email) => {
+            const emailItem = document.createElement('div');
+            emailItem.className = 'email-item';
+
+            const subject = document.createElement('div');
+            subject.className = 'email-subject';
+            subject.textContent = email.subject || '无主题';
+            emailItem.appendChild(subject);
+
+            const sender = document.createElement('div');
+            sender.className = 'email-sender';
+            sender.textContent = `发件人: ${email.from}`;
+            emailItem.appendChild(sender);
+
+            const content = document.createElement('div');
+            content.className = 'email-content';
+            content.textContent = email.text || '无内容';
+            emailItem.appendChild(content);
+
+            emailsContainer.appendChild(emailItem);
+          });
+        } else {
+          emailsContainer.innerHTML = '<div>没有未读邮件</div>';
+        }
+      } catch (error) {
+        console.error('获取邮件失败:', error);
+        document.getElementById('emailsContainer').innerHTML = '<div>获取邮件失败，请稍后重试</div>';
+      }
+    }
+  </script>
+</body>
 </html>
